@@ -1,0 +1,348 @@
+```{r}
+library(tidyverse)
+```
+```{r}
+library(dplyr)
+```
+```{r}
+library(ggplot2)
+```
+```{r}
+library(corrgram)
+```
+
+
+```{r}
+## n_distinct(PGA$Player_initial_last)
+```
+
+```{r}
+PGA<-read_csv('ASA All PGA Raw Data - Tourn Level.csv')
+```
+
+##PGA
+
+
+
+Here I am finding some average summarys statistics from the PGA dataset to get a 
+feel for what the norm of these stats are. They will range from higher to lower 
+depending on the level of golfers I am looking at. 
+```{r}
+(summary <- PGA %>% 
+  filter(!is.na(made_cut)) %>% 
+  group_by(made_cut) %>% 
+  summarise(avg_strokes = mean(strokes, na.rm = TRUE),
+            avg_sg_put = mean(sg_putt, na.rm = TRUE),
+            avg_sg_app = mean(sg_app, na.rm = TRUE),
+            avg_sg_ott = mean(sg_ott, na.rm = TRUE),
+            avg_sg_t2g = mean(sg_t2g, na.rm = TRUE)))
+```
+##top 25
+Filtering the top 25 players in the total pga dataset. 
+```{r}
+(PGA_top25<- PGA %>% 
+  filter(!is.na(pos)) %>% 
+  arrange(pos) %>% 
+  slice(1:25) %>% 
+  select(Player_initial_last, pos, strokes, sg_putt, sg_app, sg_ott, sg_total, sg_arg, sg_t2g))
+```
+
+Creating new variable that sums up specifically the short game, which I think is a 
+contributing factor to being good at the game. I will look into it further. 
+```{r}
+(PGA_top25 <- PGA_top25%>% 
+  mutate(short_game = sg_putt + sg_arg))
+```
+
+
+
+## top 10
+Filtering through the data set to find the top 10 players by position, also choosing 
+key stats so we can compare them.
+```{r}
+PGA_top10<- PGA %>% 
+  filter(!is.na(pos)) %>% 
+  arrange(pos) %>% 
+  slice(1:10) %>% 
+  dplyr::select(Player_initial_last, pos, strokes, sg_putt, sg_app, sg_ott, sg_total, sg_arg)
+```
+
+Adding the variable short game to PGA_top 10 .
+```{r}
+(PGA_top10 <- PGA_top10%>% 
+  mutate(short_game = sg_putt + sg_arg))
+```
+
+```{r}
+ggplot(PGA_top10, aes(x = reorder(Player_initial_last, -short_game), y = short_game, color = Player_initial_last)) +
+  geom_point(size = 4) +
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))
+```
+This plot demonstrates that players with higher short-game totals which are positive strokes gained 
+were able to help them save strokes on and around the greens contributing to a lower finishing place.
+0.00 is avg, +1.5 is better than avg, and +2.0 is elite
+The higher the score the more strokes youre saving per round.
+
+
+Filtering through the data set to find the worst ranked pga golfers.
+```{r}
+PGA_bottom25 <- PGA %>%
+  filter(!is.na(pos)) %>%
+  arrange(desc(pos)) %>%
+  slice(1:25) %>%
+  dplyr::select(Player_initial_last, pos, strokes, sg_putt, sg_arg, sg_app, sg_ott, sg_total, sg_t2g) %>%
+  mutate(short_game = sg_putt + sg_arg)
+```
+
+
+```{r}
+ggplot(PGA_bottom25, aes(x = reorder(Player_initial_last, -short_game), y = short_game, color = Player_initial_last)) +
+  geom_point(size = 4)+
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))
+```
+Here is the contrary showing the worst players in the database and how their short-game
+totals are mostly negative causing them to have more strokes per hole and place lower.
+Here we can see that a lot of these guys are in the negatives causing them to gain
+strokes per round. There are a few guys above 0 meaning they have an average stat
+but their short game could be bad which would make sense on why they place higher. 
+
+
+```{r}
+ggplot(PGA_top25, aes(x = reorder(Player_initial_last, -sg_t2g), y = sg_t2g, fill = Player_initial_last)) +
+  geom_col(show.legend = FALSE) +
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))
+```
+Here we can see the top 25 avg shots to the green.
+
+
+```{r}
+ggplot(PGA_bottom25, aes(x = reorder(Player_initial_last, -sg_t2g), y = sg_t2g, fill = Player_initial_last)) +
+  geom_col(show.legend = FALSE) +
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))
+```
+Here we can see the average shots to the green for the bottom 25 players 
+The players on the right side have negative sq_t2g values causing them to loose 
+strokes to the green, which is a key component of performance.
+
+##top tournement & best 3 players by sg_t2g 
+
+The 4 variables I created here are filtered to find the best 3 golfers in each 
+of the top 4 tournaments in golf, also filtering by the year to keep the data 
+as up-to-date as possible. 
+```{r}
+(top3_masters <- PGA %>% 
+  filter(`tournament name` == 'Masters Tournament', season == 2022) %>%
+  filter(!is.na(pos)) %>% 
+  arrange(pos) %>% 
+  slice(1, 3, 4))
+  
+```
+
+```{r}
+(top3_open <- PGA %>% 
+  filter(`tournament name` == 'U.S. Open', season == 2021) %>%
+  filter(!is.na(pos)) %>% 
+  arrange(pos) %>% 
+  slice(1:3))
+```
+
+```{r}
+(top3_pgaChamp <- PGA %>% 
+  filter(`tournament name` == 'PGA Championship', season == 2022) %>%
+  filter(!is.na(pos)) %>% 
+  arrange(pos) %>% 
+  slice(1:3))
+```
+
+```{r}
+(top3_playersChamp <- PGA %>% 
+  filter(`tournament name` == 'The Players Championship', season == 2022) %>%
+  filter(!is.na(pos)) %>% 
+  arrange(pos) %>% 
+  slice(1:3))
+```
+
+All 4 of these plots show the top 3 golfers in that specific tournament on the 
+x-axis and on the y-axis, it shows their shot to the green. Then colored by their 
+finishing position in the tournament.
+```{r}
+ggplot(top3_masters, aes(x = reorder(Player_initial_last, sg_t2g), y = sg_t2g, fill = factor(pos))) +
+  geom_col()+
+  labs(title = "Masters")
+```
+Here we can see that the top 3 golfers in the 2022 Masters have a high sg_t2g which 
+makes sense and is what we are trying to prove.
+```{r}
+ggplot(top3_open, aes(x = reorder(Player_initial_last, sg_t2g), y = sg_t2g, fill = factor(pos))) +
+  geom_col()+
+   labs(title = "U.S Open")
+```
+Here we can see that the top 3 golfers in the 2022 U.S Open have a high sg_t2g which 
+makes sense and is what we are trying to prove.
+
+```{r}
+ggplot(top3_pgaChamp, aes(x = reorder(Player_initial_last, sg_t2g), y = sg_t2g, fill = factor(pos))) +
+  geom_col()+
+   labs(title = "PGA Championship")
+```
+Here we can see that the top 3 golfers in the 2022 PGA Championship have a high sg_t2g which 
+makes sense and is what we are trying to prove.
+```{r}
+ggplot(top3_playersChamp, aes(x = reorder(Player_initial_last, sg_t2g), y = sg_t2g, fill = factor(pos))) +
+  geom_col()+
+   labs(title = "The Players Championship")
+```
+Here we can see that the top 3 golfers in the 2022 Players Championship have a high sg_t2g which 
+makes sense and is what we are trying to prove.
+
+
+
+
+
+##corr
+Let's find the correlation between performative stats and position, like sg_total and sq_t2g.
+
+Taking only these 3 variables from PGA and setting them to PGA_performance
+and taking out all the missing variables. 
+```{r}
+PGA_performance <- PGA[, c('sg_total', 'sg_t2g', 'pos'), use = "complete.obs"]
+```
+
+
+
+```{r}
+(cor_matrix <- cor(PGA_performance, use = "complete.obs"))
+```
+We can see that sg_total and sg_t2g have a strong positive correlations (.78)
+This means that players who gain more strokes overall also tend to gain more from
+to too green.
+
+sg_total and pos have a strong negative correlation(-.70). Which means that 
+players with higher total scores tend to have lower positions. So obviously 
+displaying better overall performance will lead to a better position in a tournament. 
+
+sg_t2g and pos have a moderate negative correlation(-.55). Meaning that players 
+Those are better from tee to green and usually finish better.
+
+Here we can see that sg_total is super important in the finishing place, and sg_t2g 
+is also a very important and key part of success in the game. 
+
+
+
+```{r}
+corrgram(PGA_performance)
+
+```
+*sg_total and sg_t2g have strong positive correlations 
+*sg_total and pos have a strong negative correlation
+*sg_t2g and pos have a moderate negative correlation
+
+strokes gained to tee vs actual finish position
+
+
+
+
+## PGA champ numbers
+
+
+
+
+Finding all the data for the 2022 PGA Championship.
+```{r}
+(PGA_championship <- PGA %>%
+  filter(`tournament name` == "PGA Championship", date == '2022-05-22') %>%
+  distinct(Player_initial_last, strokes, pos, made_cut, sg_putt, sg_app, sg_arg, sg_ott, sg_t2g, sg_total, n_rounds))
+
+```
+```{r}
+head(PGA_championship)
+```
+
+Finding the top 10 players in the tournament. 
+```{r}
+(PGA_top10chapm <- PGA_championship %>% 
+  filter(!is.na(pos)) %>% 
+  arrange(desc(pos)) %>% 
+  filter(!is.na(pos)) %>% 
+  arrange(pos) %>% 
+  slice(1:10) %>% 
+  dplyr::select(Player_initial_last))
+```
+
+
+
+Here I found all of the avg most important stats from the players performances. 
+```{r}
+(top_2022 <- PGA_championship %>%
+group_by( Player_initial_last) %>%
+  summarise(
+    avg_sg_putt = mean(sg_putt, na.rm = TRUE),
+    avg_sg_arg = mean(sg_arg, na.rm = TRUE),
+    avg_sg_t2g = mean(sg_t2g, na.rm = TRUE),
+    avg_total_sg = mean(sg_total, na.rm = TRUE)
+  ) %>%
+  arrange(desc(avg_total_sg)) %>%
+  slice_head(n = 10))
+```
+
+
+
+
+
+
+
+Attempting to predict the winner and top 3 of the 2023 PGA Championship.
+```{r}
+recent_PGA <- PGA %>% 
+  filter(season == 2022, made_cut == 1) %>%
+  dplyr::select(Player_initial_last, pos, sg_putt, sg_app, sg_arg, sg_ott, sg_t2g, sg_total, `tournament name`)
+```
+
+```{r}
+recent_PGA
+```
+```{r}
+recent_PGA_clean <- recent_PGA %>%
+  drop_na(sg_putt, sg_arg, sg_ott, sg_app, sg_t2g, sg_total, pos)
+```
+
+Creating a prediction modle using multiple regression.
+```{r}
+position_model <- lm(pos~ sg_putt + sg_arg + sg_ott +sg_app + sg_t2g + sg_total, data = recent_PGA_clean)
+```
+
+```{r}
+summary(position_model)
+```
+Total strokes gained have a strong negative effect on position. Here, we can find that the best overall predictor is the player's overall strokes gained. This is especially true if their short game is solid. 
+
+
+```{r}
+predicted_positions <- predict(position_model)
+```
+```{r}
+recent_PGA_wPrediction <- recent_PGA_clean %>% 
+  mutate(predicted_pos = predicted_positions )
+```
+
+
+```{r}
+ggplot(recent_PGA_wPrediction, aes(x = sg_t2g, y = pos))+
+  geom_point()+
+  geom_smooth()
+```
+This plot demonstrates that as players' strokes gained from tee to green
+increase, their finishing position also tends to increase. Lower strokes gained 
+from tee to green are better.
+
+
+Here is where our new variable predicted_pos is showing us the top 10 players 
+predicted to win the 2023 PGA Championship based on our model.
+```{r}
+top_predictions <-recent_PGA_wPrediction %>% 
+  arrange(predicted_pos)
+
+head(top_predictions, 10)
+```
+
+
